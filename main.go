@@ -49,10 +49,6 @@ var (
 )
 
 func main() {
-	f, _ := os.Create("/tmp/git-log.txt")
-	defer f.Close()
-	//stderr = f
-	fmt.Fprintln(f, os.Args)
 	if err := runCommand(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

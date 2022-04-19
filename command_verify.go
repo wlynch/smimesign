@@ -59,7 +59,6 @@ func verifyAttached() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse signature")
 	}
-	//fmt.Fprintln(stderr, sd)
 
 	// Verify signature
 	chains, err := sd.Verify(verifyOpts())
@@ -107,7 +106,6 @@ func verifyDetached() error {
 	if _, err = io.Copy(buf, f); err != nil {
 		return errors.Wrap(err, "failed to read signature file")
 	}
-	//fmt.Fprintf(stderr, "sig: `%s`\n", buf.String())
 
 	// Try decoding as PEM
 	var der []byte
@@ -122,7 +120,6 @@ func verifyDetached() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse signature")
 	}
-	//fmt.Fprintln(stderr, sd)
 
 	// Read in signed data
 	if fileArgs[1] == "-" {
@@ -139,7 +136,6 @@ func verifyDetached() error {
 	if _, err = io.Copy(buf, f); err != nil {
 		return errors.Wrap(err, "failed to read message file")
 	}
-	//fmt.Fprintf(stderr, "data: `%s`\n", buf.String())
 
 	chains, err := sd.VerifyDetached(buf.Bytes(), verifyOpts())
 	if err != nil {
@@ -149,7 +145,6 @@ func verifyDetached() error {
 			// TODO: We're omitting a bunch of arguments here.
 			sErrSig.emit()
 		}
-		fmt.Fprintf(stderr, "failed to verify signature: %v\n", err)
 		return errors.Wrap(err, "failed to verify signature")
 	}
 

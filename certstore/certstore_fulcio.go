@@ -33,19 +33,13 @@ func NewFulcioIdentity(ctx context.Context, w io.Writer) (*FulcioIdentity, error
 
 // Certificate gets the identity's certificate.
 func (i *FulcioIdentity) Certificate() (*x509.Certificate, error) {
-	//fmt.Printf("%T %+v\n", i.sv.SignerVerifier, i.sv.SignerVerifier)
-	//fmt.Println(string(i.sv.Cert))
-	//fmt.Fprintln(i.stderr, string(i.sv.Cert))
-
 	p, _ := pem.Decode(i.sv.Cert)
 	cert, err := x509.ParseCertificate(p.Bytes)
-	fmt.Fprintf(i.stderr, "%+v\n", cert)
 	return cert, err
 }
 
 // CertificateChain attempts to get the identity's full certificate chain.
 func (i *FulcioIdentity) CertificateChain() ([]*x509.Certificate, error) {
-	fmt.Fprintln(i.stderr, string(i.sv.Chain))
 	p, _ := pem.Decode(i.sv.Chain)
 	chain, err := x509.ParseCertificates(p.Bytes)
 	if err != nil {

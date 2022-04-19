@@ -1,10 +1,8 @@
 package cms
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/asn1"
-	"encoding/json"
 
 	"github.com/github/smimesign/ietf-cms/protocol"
 )
@@ -12,14 +10,6 @@ import (
 // SignedData represents a signed message or detached signature.
 type SignedData struct {
 	psd *protocol.SignedData
-}
-
-func (sd SignedData) String() string {
-	b := new(bytes.Buffer)
-	enc := json.NewEncoder(b)
-	enc.SetIndent("", "  ")
-	enc.Encode(sd.psd)
-	return b.String()
 }
 
 // NewSignedData creates a new SignedData from the given data.
