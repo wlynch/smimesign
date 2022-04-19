@@ -427,11 +427,7 @@ func (si SignerInfo) FindCertificate(certs []*x509.Certificate) (*x509.Certifica
 		}
 
 		for _, cert := range certs {
-			//fmt.Fprintf(os.Stderr, "%+v\n", cert)
-			//fmt.Fprintln(os.Stderr, base64.StdEncoding.EncodeToString(cert.RawIssuer), cert.SerialNumber)
-			//fmt.Fprintln(os.Stderr, base64.StdEncoding.EncodeToString(isn.Issuer.FullBytes), isn.SerialNumber)
 			if bytes.Equal(cert.RawIssuer, isn.Issuer.FullBytes) && isn.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-				//if bytes.Equal(cert.RawIssuer, isn.Issuer.FullBytes) {
 				return cert, nil
 			}
 		}
