@@ -8,12 +8,14 @@ import (
 	"io"
 	"os"
 
-	"github.com/certifi/gocertifi"
 	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 )
 
 func commandVerify() error {
+	fmt.Fprintln(stderr, os.Args, fileArgs)
+
 	sNewSig.emit()
 
 	if len(fileArgs) < 2 {
@@ -57,6 +59,7 @@ func verifyAttached() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse signature")
 	}
+	//fmt.Fprintln(stderr, sd)
 
 	// Verify signature
 	chains, err := sd.Verify(verifyOpts())
@@ -104,6 +107,7 @@ func verifyDetached() error {
 	if _, err = io.Copy(buf, f); err != nil {
 		return errors.Wrap(err, "failed to read signature file")
 	}
+	//fmt.Fprintf(stderr, "sig: `%s`\n", buf.String())
 
 	// Try decoding as PEM
 	var der []byte
@@ -118,6 +122,7 @@ func verifyDetached() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse signature")
 	}
+	//fmt.Fprintln(stderr, sd)
 
 	// Read in signed data
 	if fileArgs[1] == "-" {
@@ -134,6 +139,7 @@ func verifyDetached() error {
 	if _, err = io.Copy(buf, f); err != nil {
 		return errors.Wrap(err, "failed to read message file")
 	}
+	//fmt.Fprintf(stderr, "data: `%s`\n", buf.String())
 
 	chains, err := sd.VerifyDetached(buf.Bytes(), verifyOpts())
 	if err != nil {
@@ -143,7 +149,7 @@ func verifyDetached() error {
 			// TODO: We're omitting a bunch of arguments here.
 			sErrSig.emit()
 		}
-
+		fmt.Fprintf(stderr, "failed to verify signature: %v\n", err)
 		return errors.Wrap(err, "failed to verify signature")
 	}
 
@@ -153,34 +159,37 @@ func verifyDetached() error {
 		subj = cert.Subject.String()
 	)
 
-	fmt.Fprintf(stderr, "smimesign: Signature made using certificate ID 0x%s\n", fpr)
+	fmt.Fprintf(stderr, "smimesign: Signature made using certificate ID 0x%s | %v\n", fpr, cert.Issuer)
 	emitGoodSig(chains)
 
 	// TODO: Maybe split up signature checking and certificate checking so we can
 	// output something more meaningful.
-	fmt.Fprintf(stderr, "smimesign: Good signature from \"%s\"\n", subj)
+	fmt.Fprintf(stderr, "smimesign: Good signature from \"%s\" (%v)\n", subj, cert.EmailAddresses)
 	emitTrustFully()
 
 	return nil
 }
 
 func verifyOpts() x509.VerifyOptions {
-	roots, err := x509.SystemCertPool()
-	if err != nil {
-		// SystemCertPool isn't implemented for Windows. fall back to mozilla trust
-		// store.
-		roots, err = gocertifi.CACerts()
+	/*
+		roots, err := x509.SystemCertPool()
 		if err != nil {
-			// Fall back to an empty store. Verification will likely fail.
-			roots = x509.NewCertPool()
+			// SystemCertPool isn't implemented for Windows. fall back to mozilla trust
+			// store.
+			roots, err = gocertifi.CACerts()
+			if err != nil {
+				// Fall back to an empty store. Verification will likely fail.
+				roots = x509.NewCertPool()
+			}
 		}
-	}
 
-	for _, ident := range idents {
-		if cert, err := ident.Certificate(); err == nil {
-			roots.AddCert(cert)
+		for _, ident := range idents {
+			if cert, err := ident.Certificate(); err == nil {
+				roots.AddCert(cert)
+			}
 		}
-	}
+	*/
+	roots := fulcioroots.Get()
 
 	return x509.VerifyOptions{
 		Roots:     roots,

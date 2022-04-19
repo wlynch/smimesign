@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -12,10 +13,20 @@ import (
 	"github.com/github/smimesign/certstore"
 	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/pkg/errors"
+	"golang.org/x/term"
 )
 
 func commandSign() error {
-	userIdent, err := findUserIdentity()
+	ctx := context.Background()
+	fmt.Fprintln(stderr, "signing... non-interactive: ", !term.IsTerminal(0))
+	/*
+		for _, e := range os.Environ() {
+			fmt.Fprintln(stderr, e)
+		}
+	*/
+
+	//userIdent, err := findUserIdentity()
+	userIdent, err := certstore.NewFulcioIdentity(ctx, stderr)
 	if err != nil {
 		return errors.Wrap(err, "failed to get identity matching specified user-id")
 	}
@@ -70,6 +81,8 @@ func commandSign() error {
 		}
 	}
 
+	//fmt.Fprintf(stderr, "cert: %+v\n", cert)
+
 	chain, err := userIdent.CertificateChain()
 	if err != nil {
 		return errors.Wrap(err, "failed to get idenity certificate chain")
@@ -79,6 +92,9 @@ func commandSign() error {
 	}
 	if err = sd.SetCertificates(chain); err != nil {
 		return errors.Wrap(err, "failed to set certificates")
+	}
+	for i, c := range chain {
+		fmt.Fprintf(stderr, "chain[%d]: %+v\n", i, c)
 	}
 
 	der, err := sd.ToDER()

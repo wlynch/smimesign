@@ -49,6 +49,10 @@ var (
 )
 
 func main() {
+	f, _ := os.Create("/tmp/git-log.txt")
+	defer f.Close()
+	//stderr = f
+	fmt.Fprintln(f, os.Args)
 	if err := runCommand(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -72,21 +76,23 @@ func runCommand() error {
 		return nil
 	}
 
-	// Open certificate store
-	store, err := certstore.Open()
-	if err != nil {
-		return errors.Wrap(err, "failed to open certificate store")
-	}
-	defer store.Close()
+	/*
+		// Open certificate store
+		store, err := certstore.Open()
+		if err != nil {
+			return errors.Wrap(err, "failed to open certificate store")
+		}
+		defer store.Close()
 
-	// Get list of identities
-	idents, err = store.Identities()
-	if err != nil {
-		return errors.Wrap(err, "failed to get identities from certificate store")
-	}
-	for _, ident := range idents {
-		defer ident.Close()
-	}
+		// Get list of identities
+		idents, err = store.Identities()
+		if err != nil {
+			return errors.Wrap(err, "failed to get identities from certificate store")
+		}
+		for _, ident := range idents {
+			defer ident.Close()
+		}
+	*/
 
 	if *signFlag {
 		if *verifyFlag || *listKeysFlag {
