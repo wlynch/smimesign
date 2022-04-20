@@ -151,16 +151,33 @@ func commandSign() error {
 	if err := c.Encode(out); err != nil {
 		return err
 	}
-	fmt.Fprintln(stderr, "Predicted commit hash: ", out.Hash().String())
+	fmt.Fprintln(stderr, "Predicted commit hash:", out.Hash().String())
+
+	enc := json.NewEncoder(stderr)
+	enc.SetIndent("", " ")
 
 	resp, err := cosign.TLogUpload(ctx, rClient, sig, digest, pkBytes)
 	if err != nil {
 		fmt.Fprintln(stderr, "error uploading tlog: ", err)
 		return err
 	}
-	enc := json.NewEncoder(stderr)
-	enc.SetIndent("", " ")
 	enc.Encode(resp)
+
+	// Commit based tlog
+	sv := userIdent.SignerVerifier()
+	commit := out.Hash().String()
+	commitSig, err := sv.SignMessage(bytes.NewBufferString(commit))
+	if err != nil {
+		fmt.Fprintln(stderr, "error signing commit hash: ", err)
+		return err
+	}
+	resp2, err := cosign.TLogUpload(ctx, rClient, commitSig, []byte(commit), pkBytes)
+	if err != nil {
+		fmt.Fprintln(stderr, "error uploading tlog (commit): ", err)
+		return err
+	}
+	enc.Encode(resp2)
+
 	return nil
 }
 
