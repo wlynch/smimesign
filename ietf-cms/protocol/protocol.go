@@ -625,11 +625,11 @@ func NewSignedData(eci EncapsulatedContentInfo) (*SignedData, error) {
 }
 
 // AddSignerInfo adds a SignerInfo to the SignedData.
-func (sd *SignedData) AddSignerInfo(chain []*x509.Certificate, signer crypto.Signer) error {
+func (sd *SignedData) AddSignerInfo(chain []*x509.Certificate, signer crypto.Signer) ([]byte, []byte, error) {
 	// figure out which certificate is associated with signer.
 	pub, err := x509.MarshalPKIXPublicKey(signer.Public())
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	var (
@@ -639,11 +639,11 @@ func (sd *SignedData) AddSignerInfo(chain []*x509.Certificate, signer crypto.Sig
 
 	for _, c := range chain {
 		if err = sd.AddCertificate(c); err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		if certPub, err = x509.MarshalPKIXPublicKey(c.PublicKey); err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		if bytes.Equal(pub, certPub) {
@@ -651,19 +651,19 @@ func (sd *SignedData) AddSignerInfo(chain []*x509.Certificate, signer crypto.Sig
 		}
 	}
 	if cert == nil {
-		return ErrNoCertificate
+		return nil, nil, ErrNoCertificate
 	}
 
 	sid, err := NewIssuerAndSerialNumber(cert)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	digestAlgorithmID := digestAlgorithmForPublicKey(pub)
 
 	signatureAlgorithmOID, ok := oid.X509PublicKeyAndDigestAlgorithmToSignatureAlgorithm[cert.PublicKeyAlgorithm][digestAlgorithmID.Algorithm.String()]
 	if !ok {
-		return errors.New("unsupported certificate public key algorithm")
+		return nil, nil, errors.New("unsupported certificate public key algorithm")
 	}
 
 	signatureAlgorithmID := pkix.AlgorithmIdentifier{Algorithm: signatureAlgorithmOID}
@@ -681,60 +681,60 @@ func (sd *SignedData) AddSignerInfo(chain []*x509.Certificate, signer crypto.Sig
 	// Get the message
 	content, err := sd.EncapContentInfo.EContentValue()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if content == nil {
-		return errors.New("already detached")
+		return nil, nil, errors.New("already detached")
 	}
 
 	// Digest the message.
 	hash, err := si.Hash()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	md := hash.New()
 	if _, err = md.Write(content); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Build our SignedAttributes
 	stAttr, err := NewAttribute(oid.AttributeSigningTime, time.Now().UTC())
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	mdAttr, err := NewAttribute(oid.AttributeMessageDigest, md.Sum(nil))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	ctAttr, err := NewAttribute(oid.AttributeContentType, sd.EncapContentInfo.EContentType)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// sort attributes to match required order in marshaled form
 	si.SignedAttrs, err = sortAttributes(stAttr, mdAttr, ctAttr)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Signature is over the marshaled signed attributes
 	sm, err := si.SignedAttrs.MarshaledForSigning()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	smd := hash.New()
 	if _, errr := smd.Write(sm); errr != nil {
-		return errr
+		return nil, nil, errr
 	}
 	if si.Signature, err = signer.Sign(rand.Reader, smd.Sum(nil), hash); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	sd.addDigestAlgorithm(si.DigestAlgorithm)
 
 	sd.SignerInfos = append(sd.SignerInfos, si)
 
-	return nil
+	return sm, si.Signature, nil
 }
 
 func sortAttributes(attrs ...Attribute) ([]Attribute, error) {

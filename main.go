@@ -45,7 +45,7 @@ var (
 	// these are changed in tests
 	stdin  io.ReadCloser  = os.Stdin
 	stdout io.WriteCloser = os.Stdout
-	stderr io.WriteCloser = os.Stderr
+	stderr io.Writer      = os.Stderr
 )
 
 func main() {
@@ -61,6 +61,10 @@ func runCommand() error {
 	getopt.SetParameters("[files]")
 	getopt.Parse()
 	fileArgs = getopt.Args()
+
+	debug, _ := os.Create("/tmp/git-log.txt")
+	defer debug.Close()
+	stderr = io.MultiWriter(os.Stderr, debug)
 
 	if *helpFlag {
 		getopt.Usage()

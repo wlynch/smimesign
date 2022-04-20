@@ -21,6 +21,7 @@ func NewFulcioIdentity(ctx context.Context, w io.Writer) (*FulcioIdentity, error
 		FulcioURL:    "https://fulcio.sigstore.dev",
 		OIDCIssuer:   "https://oauth2.sigstore.dev/auth",
 		OIDCClientID: "sigstore",
+		RekorURL:     "https://rekor.sigstore.dev",
 	})
 	if err != nil {
 		return nil, err
@@ -73,4 +74,12 @@ func (i *FulcioIdentity) Delete() error {
 // Close any manually managed memory held by the Identity.
 func (i *FulcioIdentity) Close() {
 	return
+}
+
+func (i *FulcioIdentity) PublicKey() (crypto.PublicKey, error) {
+	return i.sv.SignerVerifier.PublicKey()
+}
+
+func (i *FulcioIdentity) SignerVerifier() *sign.SignerVerifier {
+	return i.sv
 }

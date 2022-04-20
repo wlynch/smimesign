@@ -15,7 +15,7 @@ func Sign(data []byte, chain []*x509.Certificate, signer crypto.Signer) ([]byte,
 		return nil, err
 	}
 
-	if err = sd.Sign(chain, signer); err != nil {
+	if _, _, err = sd.Sign(chain, signer); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func SignDetached(data []byte, chain []*x509.Certificate, signer crypto.Signer) 
 		return nil, err
 	}
 
-	if err = sd.Sign(chain, signer); err != nil {
+	if _, _, err = sd.Sign(chain, signer); err != nil {
 		return nil, err
 	}
 
@@ -44,6 +44,6 @@ func SignDetached(data []byte, chain []*x509.Certificate, signer crypto.Signer) 
 // Sign adds a signature to the SignedData.At minimum, chain must contain the
 // leaf certificate associated with the signer. Any additional intermediates
 // will also be added to the SignedData.
-func (sd *SignedData) Sign(chain []*x509.Certificate, signer crypto.Signer) error {
+func (sd *SignedData) Sign(chain []*x509.Certificate, signer crypto.Signer) ([]byte, []byte, error) {
 	return sd.psd.AddSignerInfo(chain, signer)
 }

@@ -3,6 +3,8 @@ module github.com/github/smimesign
 go 1.12
 
 require (
+	github.com/go-git/go-git v4.7.0+incompatible
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/pborman/getopt v0.0.0-20180811024354-2b5b3bfb099b
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/cosign v1.7.2

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -12,11 +13,17 @@ import (
 
 	"github.com/github/smimesign/certstore"
 	cms "github.com/github/smimesign/ietf-cms"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 func commandSign() error {
 	ctx := context.Background()
+
+	fmt.Fprintln(os.Stderr, os.Args)
 
 	//userIdent, err := findUserIdentity()
 	userIdent, err := certstore.NewFulcioIdentity(ctx, stderr)
@@ -56,12 +63,14 @@ func commandSign() error {
 	if _, err = io.Copy(dataBuf, f); err != nil {
 		return errors.Wrap(err, "failed to read message from stdin")
 	}
+	fmt.Fprintln(stderr, dataBuf)
 
 	sd, err := cms.NewSignedData(dataBuf.Bytes())
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed data")
 	}
-	if err = sd.Sign([]*x509.Certificate{cert}, signer); err != nil {
+	digest, sig, err := sd.Sign([]*x509.Certificate{cert}, signer)
+	if err != nil {
 		return errors.Wrap(err, "failed to sign message")
 	}
 	if *detachSignFlag {
@@ -92,11 +101,12 @@ func commandSign() error {
 
 	emitSigCreated(cert, *detachSignFlag)
 
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "SIGNED MESSAGE",
+		Bytes: der,
+	})
 	if *armorFlag {
-		err = pem.Encode(stdout, &pem.Block{
-			Type:  "SIGNED MESSAGE",
-			Bytes: der,
-		})
+		_, err = stdout.Write(pemBytes)
 	} else {
 		_, err = stdout.Write(der)
 	}
@@ -104,6 +114,53 @@ func commandSign() error {
 		return errors.New("failed to write signature")
 	}
 
+	rClient, err := rekor.NewClient("https://rekor.sigstore.dev")
+	if err != nil {
+		fmt.Fprintln(stderr, "error creating rekor client: ", err)
+		return err
+	}
+	pk, err := x509.MarshalPKIXPublicKey(cert.PublicKey)
+	if err != nil {
+		fmt.Fprintln(stderr, "error uploading tlog: ", err)
+		return err
+	}
+	pkBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pk,
+	})
+
+	// Precompute commit hash to store in tlog
+	obj := &plumbing.MemoryObject{}
+	obj.Write(dataBuf.Bytes())
+	obj.SetType(plumbing.CommitObject)
+	obj.SetSize(int64(dataBuf.Len()))
+
+	// go-git will compute a hash on decode and preserve that. To work around this,
+	// decode into one object then copy everything but the commit into a separate object.
+	base := object.Commit{}
+	base.Decode(obj)
+	c := object.Commit{
+		Author:       base.Author,
+		Committer:    base.Committer,
+		PGPSignature: string(pemBytes),
+		Message:      base.Message,
+		TreeHash:     base.TreeHash,
+		ParentHashes: base.ParentHashes,
+	}
+	out := &plumbing.MemoryObject{}
+	if err := c.Encode(out); err != nil {
+		return err
+	}
+	fmt.Fprintln(stderr, "Predicted commit hash: ", out.Hash().String())
+
+	resp, err := cosign.TLogUpload(ctx, rClient, sig, digest, pkBytes)
+	if err != nil {
+		fmt.Fprintln(stderr, "error uploading tlog: ", err)
+		return err
+	}
+	enc := json.NewEncoder(stderr)
+	enc.SetIndent("", " ")
+	enc.Encode(resp)
 	return nil
 }
 
