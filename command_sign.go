@@ -152,7 +152,13 @@ func commandSign() error {
 	}
 	enc.Encode(resp)
 
-	// Commit based tlog
+	// #2 - Commit SHA tlog
+	// This uploads the commit SHA + sig(commit SHA) to the tlog using the same
+	// key used to sign the commit data itself.
+	// Since the commit SHA ~= hash(commit data + sig(commit data)) and we're
+	// using the same key, this is probably okay? e.g. even if you could cause a SHA1 collision,
+	// you would still need the underlying commit to be valid and using the same key which seems hard
+	// (though should get a 2nd opinion to validate this).
 	sv := userIdent.SignerVerifier()
 	commitSig, err := sv.SignMessage(bytes.NewBufferString(commit))
 	if err != nil {
