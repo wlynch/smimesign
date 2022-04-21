@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -11,6 +12,9 @@ import (
 	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 func commandVerify() error {
@@ -102,17 +106,17 @@ func verifyDetached() error {
 	}
 	defer f.Close()
 
-	buf := new(bytes.Buffer)
-	if _, err = io.Copy(buf, f); err != nil {
+	sig := new(bytes.Buffer)
+	if _, err = io.Copy(sig, f); err != nil {
 		return errors.Wrap(err, "failed to read signature file")
 	}
 
 	// Try decoding as PEM
 	var der []byte
-	if blk, _ := pem.Decode(buf.Bytes()); blk != nil {
+	if blk, _ := pem.Decode(sig.Bytes()); blk != nil {
 		der = blk.Bytes
 	} else {
-		der = buf.Bytes()
+		der = sig.Bytes()
 	}
 
 	// Parse signature
@@ -132,7 +136,7 @@ func verifyDetached() error {
 	}
 
 	// Verify signature
-	buf.Reset()
+	buf := new(bytes.Buffer)
 	if _, err = io.Copy(buf, f); err != nil {
 		return errors.Wrap(err, "failed to read message file")
 	}
@@ -147,6 +151,19 @@ func verifyDetached() error {
 		}
 		return errors.Wrap(err, "failed to verify signature")
 	}
+
+	commit, err := commitHash(buf.Bytes(), sig.Bytes())
+	if err != nil {
+		fmt.Fprintln(stderr, "error generating commit hash: ", err)
+		return err
+	}
+	fmt.Fprintln(stderr, "searching tlog for commit:", commit)
+	tlog, err := findTlog(commit)
+	if err != nil {
+		fmt.Fprintln(stderr, "error finding tlog: ", err)
+		return err
+	}
+	fmt.Fprintln(stderr, "tlog index:", *tlog.LogIndex)
 
 	var (
 		cert = chains[0][0][0]
@@ -190,4 +207,34 @@ func verifyOpts() x509.VerifyOptions {
 		Roots:     roots,
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
+}
+
+func findTlog(commit string) (*models.LogEntryAnon, error) {
+	ctx := context.Background()
+	rClient, err := rekor.NewClient("https://rekor.sigstore.dev")
+	if err != nil {
+		fmt.Fprintln(stderr, "error creating rekor client: ", err)
+		return nil, err
+	}
+
+	uuids, err := cosign.FindTLogEntriesByPayload(ctx, rClient, []byte(commit))
+	if err != nil {
+		return nil, err
+	}
+	if len(uuids) == 0 {
+		return nil, fmt.Errorf("could not find a tlog entry for commit [%s]", commit)
+	}
+	fmt.Fprintf(stderr, "found %d matching tlog entries\n", len(uuids))
+
+	for _, u := range uuids {
+		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, u)
+		if err != nil {
+			continue
+		}
+
+		// additional tlog verification goes here (need to refactor )
+
+		return tlogEntry, nil
+	}
+	return nil, errors.New("no tlog entry found")
 }

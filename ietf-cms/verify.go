@@ -153,14 +153,20 @@ func (sd *SignedData) verify(econtent []byte, opts x509.VerifyOptions) ([][][]*x
 			// This check is slightly redundant, given that the cert validity times
 			// are checked by cert.Verify. We take the timestamp accuracy into account
 			// here though, whereas cert.Verify will not.
-			if !tsti.Before(cert.NotAfter) || !tsti.After(cert.NotBefore) {
-				return nil, x509.CertificateInvalidError{Cert: cert, Reason: x509.Expired, Detail: ""}
-			}
+			/*
+				if !tsti.Before(cert.NotAfter) || !tsti.After(cert.NotBefore) {
+					return nil, x509.CertificateInvalidError{Cert: cert, Reason: x509.Expired, Detail: ""}
+				}
+			*/
 
 			if optsCopy.CurrentTime.IsZero() {
 				optsCopy.CurrentTime = tsti.GenTime
 			}
 		}
+
+		// Hack to allow validation of cert after the fact - needed for ephemeral cert validation.
+		// See https://github.com/sigstore/cosign/blob/f2c360eb97e52fa7766ecde370f1a48b910d7404/pkg/cosign/verify.go#L925
+		optsCopy.CurrentTime = cert.NotBefore
 
 		if chain, err := cert.Verify(optsCopy); err != nil {
 			return nil, err

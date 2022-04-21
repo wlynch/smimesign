@@ -8,6 +8,7 @@ require (
 	github.com/pborman/getopt v0.0.0-20180811024354-2b5b3bfb099b
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/cosign v1.7.2
+	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
 	github.com/stretchr/testify v1.7.1
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f

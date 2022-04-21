@@ -129,29 +129,12 @@ func commandSign() error {
 		Bytes: pk,
 	})
 
-	// Precompute commit hash to store in tlog
-	obj := &plumbing.MemoryObject{}
-	obj.Write(dataBuf.Bytes())
-	obj.SetType(plumbing.CommitObject)
-	obj.SetSize(int64(dataBuf.Len()))
-
-	// go-git will compute a hash on decode and preserve that. To work around this,
-	// decode into one object then copy everything but the commit into a separate object.
-	base := object.Commit{}
-	base.Decode(obj)
-	c := object.Commit{
-		Author:       base.Author,
-		Committer:    base.Committer,
-		PGPSignature: string(pemBytes),
-		Message:      base.Message,
-		TreeHash:     base.TreeHash,
-		ParentHashes: base.ParentHashes,
-	}
-	out := &plumbing.MemoryObject{}
-	if err := c.Encode(out); err != nil {
+	commit, err := commitHash(dataBuf.Bytes(), pemBytes)
+	if err != nil {
+		fmt.Fprintln(stderr, "error generating commit hash: ", err)
 		return err
 	}
-	fmt.Fprintln(stderr, "Predicted commit hash:", out.Hash().String())
+	fmt.Fprintln(stderr, "Predicted commit hash:", commit)
 
 	enc := json.NewEncoder(stderr)
 	enc.SetIndent("", " ")
@@ -165,7 +148,6 @@ func commandSign() error {
 
 	// Commit based tlog
 	sv := userIdent.SignerVerifier()
-	commit := out.Hash().String()
 	commitSig, err := sv.SignMessage(bytes.NewBufferString(commit))
 	if err != nil {
 		fmt.Fprintln(stderr, "error signing commit hash: ", err)
@@ -256,4 +238,28 @@ func chainWithoutRoot(chain []*x509.Certificate) []*x509.Certificate {
 	}
 
 	return chain
+}
+
+func commitHash(data, sig []byte) (string, error) {
+	// Precompute commit hash to store in tlog
+	obj := &plumbing.MemoryObject{}
+	obj.Write(data)
+	obj.SetType(plumbing.CommitObject)
+	//obj.SetSize(len(data))
+
+	// go-git will compute a hash on decode and preserve that. To work around this,
+	// decode into one object then copy everything but the commit into a separate object.
+	base := object.Commit{}
+	base.Decode(obj)
+	c := object.Commit{
+		Author:       base.Author,
+		Committer:    base.Committer,
+		PGPSignature: string(sig),
+		Message:      base.Message,
+		TreeHash:     base.TreeHash,
+		ParentHashes: base.ParentHashes,
+	}
+	out := &plumbing.MemoryObject{}
+	err := c.Encode(out)
+	return out.Hash().String(), err
 }
