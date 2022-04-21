@@ -18,7 +18,7 @@ import (
 )
 
 func commandVerify() error {
-	fmt.Fprintln(stderr, os.Args, fileArgs)
+	//fmt.Fprintln(stderr, os.Args, fileArgs)
 
 	sNewSig.emit()
 
@@ -232,7 +232,7 @@ func findTlog(commit string) (*models.LogEntryAnon, error) {
 			continue
 		}
 
-		// additional tlog verification goes here (need to refactor )
+		// additional tlog verification goes here (need to refactor cosign to make this easier)
 
 		return tlogEntry, nil
 	}

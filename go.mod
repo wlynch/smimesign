@@ -14,4 +14,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 )
 
+// We need to use a modified version of cosign to force an interactive session -
+// the way git invokes the signing tool eats stdout/stderr and without a terminal.
+// If unmodified cosign hangs silently waiting for the user to go through the OIDC flow.
 replace github.com/sigstore/cosign => ../../sigstore/cosign

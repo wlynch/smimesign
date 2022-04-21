@@ -139,6 +139,12 @@ func commandSign() error {
 	enc := json.NewEncoder(stderr)
 	enc.SetIndent("", " ")
 
+	// We're uploading to the tlog in 2 ways, mostly because I'm not sure which way is better.
+
+	// #1 - Upload the exact signature that the x509 signing produced +
+	// the corresponding digest that was signed.
+	// This will mean the signature in the tlog will match what's stored in the commit, but also
+	// makes it much harder to look up the tlog (i.e. you can't just search by commit).
 	resp, err := cosign.TLogUpload(ctx, rClient, sig, digest, pkBytes)
 	if err != nil {
 		fmt.Fprintln(stderr, "error uploading tlog: ", err)
