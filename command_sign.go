@@ -11,10 +11,11 @@ import (
 
 	"github.com/github/smimesign/certstore"
 	cms "github.com/github/smimesign/ietf-cms"
+	"github.com/github/smimesign/status"
 	"github.com/pkg/errors"
 )
 
-func commandSign() error {
+func commandSign(w *status.Writer) error {
 	userIdent, err := findUserIdentity()
 	if err != nil {
 		return errors.Wrap(err, "failed to get identity matching specified user-id")
@@ -26,7 +27,7 @@ func commandSign() error {
 	// Git is looking for "\n[GNUPG:] SIG_CREATED ", meaning we need to print a
 	// line before SIG_CREATED. BEGIN_SIGNING seems appropraite. GPG emits this,
 	// though GPGSM does not.
-	sBeginSigning.emit()
+	w.Emit(status.StatusBeginSigning)
 
 	cert, err := userIdent.Certificate()
 	if err != nil {
@@ -86,7 +87,7 @@ func commandSign() error {
 		return errors.Wrap(err, "failed to serialize signature")
 	}
 
-	emitSigCreated(cert, *detachSignFlag)
+	w.EmitSigCreated(cert, *detachSignFlag)
 
 	if *armorFlag {
 		err = pem.Encode(stdout, &pem.Block{

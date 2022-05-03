@@ -10,20 +10,22 @@ import (
 
 	"github.com/certifi/gocertifi"
 	cms "github.com/github/smimesign/ietf-cms"
+	"github.com/github/smimesign/internal"
+	"github.com/github/smimesign/status"
 	"github.com/pkg/errors"
 )
 
-func commandVerify() error {
-	sNewSig.emit()
+func commandVerify(w *status.Writer) error {
+	w.Emit(status.StatusNewSig)
 
 	if len(fileArgs) < 2 {
-		return verifyAttached()
+		return verifyAttached(w)
 	}
 
-	return verifyDetached()
+	return verifyDetached(w)
 }
 
-func verifyAttached() error {
+func verifyAttached(w *status.Writer) error {
 	var (
 		f   io.ReadCloser
 		err error
@@ -62,10 +64,10 @@ func verifyAttached() error {
 	chains, err := sd.Verify(verifyOpts())
 	if err != nil {
 		if len(chains) > 0 {
-			emitBadSig(chains)
+			w.EmitBadSig(chains)
 		} else {
 			// TODO: We're omitting a bunch of arguments here.
-			sErrSig.emit()
+			w.Emit(status.StatusErrSig)
 		}
 
 		return errors.Wrap(err, "failed to verify signature")
@@ -73,22 +75,22 @@ func verifyAttached() error {
 
 	var (
 		cert = chains[0][0][0]
-		fpr  = certHexFingerprint(cert)
+		fpr  = internal.CertHexFingerprint(cert)
 		subj = cert.Subject.String()
 	)
 
 	fmt.Fprintf(stderr, "smimesign: Signature made using certificate ID 0x%s\n", fpr)
-	emitGoodSig(chains)
+	w.EmitGoodSig(chains)
 
 	// TODO: Maybe split up signature checking and certificate checking so we can
 	// output something more meaningful.
 	fmt.Fprintf(stderr, "smimesign: Good signature from \"%s\"\n", subj)
-	emitTrustFully()
+	w.EmitTrustFully()
 
 	return nil
 }
 
-func verifyDetached() error {
+func verifyDetached(w *status.Writer) error {
 	var (
 		f   io.ReadCloser
 		err error
@@ -138,10 +140,10 @@ func verifyDetached() error {
 	chains, err := sd.VerifyDetached(buf.Bytes(), verifyOpts())
 	if err != nil {
 		if len(chains) > 0 {
-			emitBadSig(chains)
+			w.EmitBadSig(chains)
 		} else {
 			// TODO: We're omitting a bunch of arguments here.
-			sErrSig.emit()
+			w.Emit(status.StatusErrSig)
 		}
 
 		return errors.Wrap(err, "failed to verify signature")
@@ -149,17 +151,17 @@ func verifyDetached() error {
 
 	var (
 		cert = chains[0][0][0]
-		fpr  = certHexFingerprint(cert)
+		fpr  = internal.CertHexFingerprint(cert)
 		subj = cert.Subject.String()
 	)
 
 	fmt.Fprintf(stderr, "smimesign: Signature made using certificate ID 0x%s\n", fpr)
-	emitGoodSig(chains)
+	w.EmitGoodSig(chains)
 
 	// TODO: Maybe split up signature checking and certificate checking so we can
 	// output something more meaningful.
 	fmt.Fprintf(stderr, "smimesign: Good signature from \"%s\"\n", subj)
-	emitTrustFully()
+	w.EmitTrustFully()
 
 	return nil
 }

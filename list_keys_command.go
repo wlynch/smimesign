@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/github/smimesign/internal"
 	"github.com/pkg/errors"
 )
 
@@ -20,7 +21,7 @@ func commandListKeys() error {
 			continue
 		}
 
-		fmt.Println("       ID:", certHexFingerprint(cert))
+		fmt.Println("       ID:", internal.CertHexFingerprint(cert))
 		fmt.Println("      S/N:", cert.SerialNumber.Text(16))
 		fmt.Println("Algorithm:", cert.SignatureAlgorithm.String())
 		fmt.Println(" Validity:", cert.NotBefore.String(), "-", cert.NotAfter.String())

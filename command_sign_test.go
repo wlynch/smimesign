@@ -2,10 +2,13 @@ package main
 
 import (
 	"crypto/x509"
+	"io/ioutil"
 	"testing"
 
 	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/github/smimesign/ietf-cms/protocol"
+	"github.com/github/smimesign/internal"
+	"github.com/github/smimesign/status"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,10 +22,10 @@ func chainContains(chain []*x509.Certificate, want *x509.Certificate) bool {
 }
 
 func TestSign(t *testing.T) {
-	defer testSetup(t, "--sign", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 	sd, err := cms.ParseSignedData(stdoutBuf.Bytes())
 	require.NoError(t, err)
 
@@ -31,10 +34,10 @@ func TestSign(t *testing.T) {
 }
 
 func TestSignIncludeCertsAIA(t *testing.T) {
-	defer testSetup(t, "--sign", "-u", certHexFingerprint(aiaLeaf.Certificate))()
+	defer testSetup(t, "--sign", "-u", internal.CertHexFingerprint(aiaLeaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -51,10 +54,10 @@ func TestSignIncludeCertsAIA(t *testing.T) {
 }
 
 func TestSignIncludeCertsDefault(t *testing.T) {
-	defer testSetup(t, "--sign", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -71,10 +74,10 @@ func TestSignIncludeCertsDefault(t *testing.T) {
 }
 
 func TestSignIncludeCertsMinus3(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=-3", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=-3", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -91,10 +94,10 @@ func TestSignIncludeCertsMinus3(t *testing.T) {
 }
 
 func TestSignIncludeCertsMinus2(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=-2", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=-2", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -111,10 +114,10 @@ func TestSignIncludeCertsMinus2(t *testing.T) {
 }
 
 func TestSignIncludeCertsMinus1(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=-1", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=-1", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -132,10 +135,10 @@ func TestSignIncludeCertsMinus1(t *testing.T) {
 }
 
 func TestSignIncludeCerts0(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=0", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=0", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -150,10 +153,10 @@ func TestSignIncludeCerts0(t *testing.T) {
 }
 
 func TestSignIncludeCerts1(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=1", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=1", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -169,10 +172,10 @@ func TestSignIncludeCerts1(t *testing.T) {
 }
 
 func TestSignIncludeCerts2(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=2", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=2", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -189,10 +192,10 @@ func TestSignIncludeCerts2(t *testing.T) {
 }
 
 func TestSignIncludeCerts3(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=3", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=3", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)
@@ -210,10 +213,10 @@ func TestSignIncludeCerts3(t *testing.T) {
 }
 
 func TestSignIncludeCerts4(t *testing.T) {
-	defer testSetup(t, "--sign", "--include-certs=4", "-u", certHexFingerprint(leaf.Certificate))()
+	defer testSetup(t, "--sign", "--include-certs=4", "-u", internal.CertHexFingerprint(leaf.Certificate))()
 
 	stdinBuf.WriteString("hello, world!")
-	require.NoError(t, commandSign())
+	require.NoError(t, commandSign(status.New(ioutil.Discard)))
 
 	ci, err := protocol.ParseContentInfo(stdoutBuf.Bytes())
 	require.NoError(t, err)

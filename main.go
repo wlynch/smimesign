@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/github/smimesign/certstore"
+	"github.com/github/smimesign/status"
 	"github.com/pborman/getopt/v2"
 	"github.com/pkg/errors"
 )
@@ -87,6 +88,7 @@ func runCommand() error {
 	for _, ident := range idents {
 		defer ident.Close()
 	}
+	w := status.NewFromFD(*statusFdOpt)
 
 	if *signFlag {
 		if *verifyFlag || *listKeysFlag {
@@ -94,7 +96,7 @@ func runCommand() error {
 		} else if len(*localUserOpt) == 0 {
 			return errors.New("specify a USER-ID to sign with")
 		} else {
-			return commandSign()
+			return commandSign(w)
 		}
 	}
 
@@ -108,7 +110,7 @@ func runCommand() error {
 		} else if *armorFlag {
 			return errors.New("armor cannot be specified for verification")
 		} else {
-			return commandVerify()
+			return commandVerify(w)
 		}
 	}
 

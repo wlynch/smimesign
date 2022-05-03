@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
 	"regexp"
 	"strings"
+
+	"github.com/github/smimesign/internal"
 )
 
 // normalizeFingerprint converts a string fingerprint to hex, removing leading
@@ -35,22 +36,7 @@ func certHasFingerprint(cert *x509.Certificate, fpr []byte) bool {
 		return false
 	}
 
-	return bytes.HasSuffix(certFingerprint(cert), fpr)
-}
-
-// certHexFingerprint calculated the hex SHA1 fingerprint of a certificate.
-func certHexFingerprint(cert *x509.Certificate) string {
-	return hex.EncodeToString(certFingerprint(cert))
-}
-
-// certFingerprint calculated the SHA1 fingerprint of a certificate.
-func certFingerprint(cert *x509.Certificate) []byte {
-	if len(cert.Raw) == 0 {
-		return nil
-	}
-
-	fpr := sha1.Sum(cert.Raw)
-	return fpr[:]
+	return bytes.HasSuffix(internal.CertFingerprint(cert), fpr)
 }
 
 // normalizeEmail attempts to extract an email address from a user-id string.
